@@ -1,38 +1,52 @@
+# Define a versão do Docker Compose a ser usada
 version: '3.8'
 
+# Define os serviços que serão executados
 services:
-
-  db:
-    build: ./db
-    container_name: app_db_container
+  # Serviço para o banco de dados PostgreSQL
+  postgres:
+    # Define o caminho para o Dockerfile do PostgreSQL
+    build:
+      context: ./docker/postgres
+    # Define as variáveis de ambiente para configurar o PostgreSQL
     environment:
-      POSTGRES_USER: app_database
-      POSTGRES_PASSWORD: app_user
-      POSTGRES_DB: user123
-    volumes:
-      - faq-postgres-data:/var/lib/postgresql/data
-      - ./bd/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-    ports:
-      - "2000:5432"
+      POSTGRES_USER: admin  # Nome de usuário administrativo do banco de dados
+      POSTGRES_PASSWORD: admin_password  # Senha do usuário administrativo
+      POSTGRES_DB: satisfaction_survey  # Nome do banco de dados que será criado automaticamente
+    # Define a rede na qual o serviço estará conectado
     networks:
-      - app-network
+      - survey-network
 
-  
-  web:
-  build: ./app
-  ports:
-    - "3000:3000"
-  environment:
-    - NODE_ENV=development
-  volumes:
-    - .:/usr/src/app
-    - /usr/scr/app/node_modules
-  command: npm run dev
-  depends_on:
-    - db
-  networks:
-    - app-network
+  # Serviço para o banco de dados MongoDB
+  mongodb:
+    # Define o caminho para o Dockerfile do MongoDB
+    build:
+      context: ./docker/mongodb
+    # Define as variáveis de ambiente para configurar o MongoDB
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin  # Nome de usuário administrativo do MongoDB
+      MONGO_INITDB_ROOT_PASSWORD: admin_password  # Senha do usuário administrativo
+    # Define a rede na qual o serviço estará conectado
+    networks:
+      - survey-network
 
+  # Serviço para a aplicação Node.js
+  nodejs:
+    # Define o caminho para o Dockerfile do Node.js
+    build:
+      context: ./docker/nodejs
+    # Mapeia a porta 3000 do container para a porta 3000 do host
+    ports:
+      - "3000:3000"
+    # Define dependências para garantir que o Node.js só inicie após PostgreSQL e MongoDB estarem prontos
+    depends_on:
+      - postgres
+      - mongodb
+    # Define a rede na qual o serviço estará conectado
+    networks:
+      - survey-network
+
+# Define a rede Docker que será usada pelos serviços
 networks:
-  app-network:
-    driver: bridge
+  survey-network:
+    driver: bridge  # Usa o driver de rede "bridge" para comunicação entre os containers
